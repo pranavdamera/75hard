@@ -36,7 +36,7 @@ function LoginForm() {
 
     try {
       if (tab === 'signup') {
-        const { error: signUpError } = await supabase.auth.signUp({
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -54,8 +54,14 @@ function LoginForm() {
             .eq('id', user.id)
         }
 
-        setMessage('Account created! Check your email to confirm, then sign in.')
-        setTab('login')
+        if (signUpData.session) {
+          setMessage('Account created! Redirecting...')
+          router.push('/dashboard')
+          router.refresh()
+        } else {
+          setMessage('Account created! Check your email to confirm, then sign in.')
+          setTab('login')
+        }
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
