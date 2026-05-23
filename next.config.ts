@@ -1,12 +1,12 @@
 import type { NextConfig } from "next";
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-
-const appRoot = dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
+  // Pin Turbopack's workspace root to this project directory.
+  // Without this, Next.js 16 walks up to /Users/pranav/ (which has a
+  // stale package-lock.json), causing it to scan the entire home directory
+  // during module resolution and making dev compilation very slow.
   turbopack: {
-    root: appRoot,
+    root: process.cwd(),
   },
 };
 

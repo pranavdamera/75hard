@@ -3,7 +3,9 @@
     "allow": [
       "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --no-turbopack --yes)",
       "Bash(npm install *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(cat /Users/pranav/package-lock.json | head -5 && wc -l /Users/pranav/package-lock.json)",
+      "Read(//Users/pranav/**)"
     ]
   }
 }
