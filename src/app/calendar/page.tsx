@@ -53,7 +53,7 @@ function DayDetailDrawer({
       />
 
       {/* Sheet */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-2xl bg-surface border-t border-border">
+      <div className="fixed bottom-0 left-0 right-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-2xl bg-surface border-t border-border slide-up">
         <div className="sticky top-0 bg-surface border-b border-border px-4 py-3 flex items-center justify-between">
           <div>
             <p className="font-semibold">{displayDate}</p>
@@ -359,7 +359,7 @@ export default function CalendarPage() {
                 <button
                   key={l.id}
                   onClick={() => setDayDetail({ date: l.log_date, log: l })}
-                  className="relative aspect-square rounded-xl overflow-hidden border border-border hover:opacity-90 transition-opacity"
+                  className="relative aspect-square rounded-xl overflow-hidden border border-border hover:border-border hover:scale-[1.03] active:scale-100 transition-all duration-200"
                 >
                   <Image
                     src={l.photo_url!}

@@ -276,7 +276,12 @@ function DashboardContent() {
 
           <ProgressBar completed={completedCount} total={total} />
 
-          <p className="text-xs text-muted text-center font-medium">{microcopy}</p>
+          <p className={[
+            'text-xs text-center font-semibold tracking-wide transition-colors duration-300',
+            completedCount >= total ? 'text-success' : 'text-muted',
+          ].join(' ')}>
+            {microcopy}
+          </p>
         </div>
 
         {/* Checklist */}
@@ -318,27 +323,31 @@ function DashboardContent() {
 
         {/* Nutrition goal card */}
         {nutritionGoal && (
-          <Link href="/nutrition" className="block p-4 rounded-xl bg-surface border border-border hover:border-primary/40 transition-colors">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-muted uppercase tracking-wider">Nutrition Goals</p>
-              <span className="text-xs text-primary">Edit →</span>
-            </div>
-            <div className="flex gap-4">
-              <div>
-                <p className="text-lg font-black text-foreground">{nutritionGoal.target_calories?.toLocaleString()}</p>
-                <p className="text-[10px] text-muted uppercase tracking-wide">Calories</p>
-              </div>
-              <div>
-                <p className="text-lg font-black text-foreground">{nutritionGoal.protein_g}g</p>
-                <p className="text-[10px] text-muted uppercase tracking-wide">Protein</p>
-              </div>
-              <div>
-                <p className="text-lg font-black text-foreground">{nutritionGoal.carbs_g}g</p>
-                <p className="text-[10px] text-muted uppercase tracking-wide">Carbs</p>
-              </div>
-              <div>
-                <p className="text-lg font-black text-foreground">{nutritionGoal.fat_g}g</p>
-                <p className="text-[10px] text-muted uppercase tracking-wide">Fat</p>
+          <Link
+            href="/nutrition"
+            className="block rounded-xl overflow-hidden border border-border/60 hover:border-primary/40 transition-all duration-200 group"
+          >
+            <div className="flex items-stretch">
+              {/* Orange left accent */}
+              <div className="w-1 shrink-0 bg-gradient-to-b from-primary to-primary/40" />
+              <div className="flex-1 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[10px] font-bold text-muted uppercase tracking-widest">Nutrition Goals</p>
+                  <span className="text-xs text-primary/70 group-hover:text-primary transition-colors font-semibold">Edit →</span>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { val: nutritionGoal.target_calories?.toLocaleString(), label: 'Cal', color: 'text-primary' },
+                    { val: `${nutritionGoal.protein_g}g`,                   label: 'Pro', color: 'text-success' },
+                    { val: `${nutritionGoal.carbs_g}g`,                     label: 'Carb', color: 'text-warning' },
+                    { val: `${nutritionGoal.fat_g}g`,                       label: 'Fat', color: 'text-muted' },
+                  ].map(item => (
+                    <div key={item.label} className="text-center">
+                      <p className={`text-base font-black tabular-nums ${item.color}`}>{item.val}</p>
+                      <p className="text-[9px] text-muted uppercase tracking-widest font-semibold mt-0.5">{item.label}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </Link>
