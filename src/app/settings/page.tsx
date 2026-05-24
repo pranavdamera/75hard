@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Nav from '@/components/Nav'
 import { getChallengeInfo } from '@/lib/utils'
+import { getNotifyEnabled, setNotifyEnabled } from '@/hooks/useFriendNotifications'
 import type { Profile } from '@/types/database'
 
 export default function SettingsPage() {
@@ -21,6 +22,9 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const [notifyEnabled, setNotifyState] = useState(true)
+
+  useEffect(() => { setNotifyState(getNotifyEnabled()) }, [])
 
   useEffect(() => {
     async function load() {
@@ -178,6 +182,38 @@ export default function SettingsPage() {
             </div>
           </div>
         )}
+
+        {/* Notifications */}
+        <div className="bg-surface border border-border rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold">Friend notifications</p>
+              <p className="text-xs text-muted mt-0.5">
+                Alert when an accountability partner logs activity
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                const next = !notifyEnabled
+                setNotifyState(next)
+                setNotifyEnabled(next)
+              }}
+              className={[
+                'relative w-11 h-6 rounded-full transition-colors duration-200 shrink-0',
+                notifyEnabled ? 'bg-primary' : 'bg-surface-3',
+              ].join(' ')}
+              role="switch"
+              aria-checked={notifyEnabled}
+            >
+              <span
+                className={[
+                  'absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200',
+                  notifyEnabled ? 'translate-x-5' : 'translate-x-0',
+                ].join(' ')}
+              />
+            </button>
+          </div>
+        </div>
 
         {/* Danger zone */}
         <div className="bg-surface border border-border rounded-xl p-4 space-y-3">
