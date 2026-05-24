@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Nav from '@/components/Nav'
 import CalendarGrid from '@/components/CalendarGrid'
-import { getChallengeInfo, countCompleted, computeStreak, addDays } from '@/lib/utils'
+import { getChallengeInfo, countCompleted, computeStreak, addDays, getLocalToday } from '@/lib/utils'
 import type { Profile, DailyLog } from '@/types/database'
 
 export default function CalendarPage() {
@@ -62,12 +62,15 @@ export default function CalendarPage() {
 
   const info = getChallengeInfo(profile?.start_date ?? null)
 
-  const completedDays = logs.filter((l) => countCompleted(l) === 8).length
+  const today = getLocalToday()
+  const completedDays = logs.filter((l) => l.log_date < today && countCompleted(l) === 8).length
   const partialDays = logs.filter((l) => {
-    const d = countCompleted(l)
-    return d > 0 && d < 8
+    const n = countCompleted(l)
+    return l.log_date < today && n > 0 && n < 8
   }).length
-  const failedDays = logs.filter((l) => countCompleted(l) === 0).length
+  // Days that have passed (excluding today) minus those with any log entry
+  const daysPassed = Math.max(0, info.status === 'in_progress' ? info.dayNumber - 1 : info.status === 'complete' ? 75 : 0)
+  const failedDays = Math.max(0, daysPassed - completedDays - partialDays)
   const streak = profile?.start_date ? computeStreak(logs, profile.start_date) : 0
 
   function handleSelectDay(date: string) {

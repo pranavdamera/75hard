@@ -2,8 +2,9 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Nav from '@/components/Nav'
 import ProgressBar from '@/components/ProgressBar'
@@ -24,14 +25,18 @@ interface FriendWithLog {
   todayLog: Partial<DailyLog> | null
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
   const supabase = createClient()
+  const searchParams = useSearchParams()
 
   const [profile, setProfile] = useState<Profile | null>(null)
   const [log, setLog] = useState<Partial<DailyLog> | null>(null)
   const [notes, setNotes] = useState('')
   const [notesSaved, setNotesSaved] = useState(false)
-  const [selectedDate, setSelectedDate] = useState(getLocalToday())
+  const initialDate = searchParams.get('date') ?? getLocalToday()
+  const [selectedDate, setSelectedDate] = useState(
+    initialDate <= getLocalToday() ? initialDate : getLocalToday()
+  )
   const [friends, setFriends] = useState<FriendWithLog[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -263,8 +268,7 @@ export default function DashboardPage() {
               <DailyChecklist
                 log={log ?? {}}
                 onToggle={handleToggle}
-                isPhotoTask={(key) => key === 'progress_photo_done'}
-                onPhotoTaskClick={() => setShowPhotoUpload((v) => !v)}
+                onPhotoUploadClick={() => setShowPhotoUpload((v) => !v)}
               />
             </section>
 
@@ -341,5 +345,13 @@ export default function DashboardPage() {
 
       <Nav />
     </div>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div className="min-h-dvh bg-background flex items-center justify-center"><div className="text-muted text-sm">Loading…</div></div>}>
+      <DashboardContent />
+    </Suspense>
   )
 }

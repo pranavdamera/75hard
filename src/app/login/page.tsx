@@ -45,13 +45,16 @@ function LoginForm() {
         })
         if (signUpError) throw signUpError
 
-        // Update display_name in profiles (trigger creates the row)
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user && name) {
-          await supabase
-            .from('profiles')
-            .update({ display_name: name })
-            .eq('id', user.id)
+        // Upsert profile — handles trigger race and the case where trigger is absent
+        if (signUpData.user) {
+          await supabase.from('profiles').upsert(
+            {
+              id: signUpData.user.id,
+              email: signUpData.user.email!,
+              display_name: name || email.split('@')[0],
+            },
+            { onConflict: 'id' }
+          )
         }
 
         if (signUpData.session) {
