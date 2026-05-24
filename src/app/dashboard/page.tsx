@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useEffect, useState, useCallback, Suspense } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Nav from '@/components/Nav'
 import ProgressBar from '@/components/ProgressBar'
@@ -18,8 +18,10 @@ import {
   countCompleted,
   getLocalToday,
   addDays,
+  getMicrocopy,
+  totalEnabled,
 } from '@/lib/utils'
-import type { Profile, DailyLog, TaskKey } from '@/types/database'
+import type { Profile, DailyLog, TaskKey, ChallengeTask, NutritionGoal } from '@/types/database'
 
 interface FriendWithLog {
   profile: Profile
@@ -27,54 +29,64 @@ interface FriendWithLog {
 }
 
 function DashboardContent() {
-  const supabase = createClient()
-  const searchParams = useSearchParams()
+  const supabase      = createClient()
+  const router        = useRouter()
+  const searchParams  = useSearchParams()
 
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [log, setLog] = useState<Partial<DailyLog> | null>(null)
-  const [notes, setNotes] = useState('')
-  const [notesSaved, setNotesSaved] = useState(false)
+  const [profile,        setProfile]        = useState<Profile | null>(null)
+  const [log,            setLog]            = useState<Partial<DailyLog> | null>(null)
+  const [tasks,          setTasks]          = useState<ChallengeTask[]>([])
+  const [nutritionGoal,  setNutritionGoal]  = useState<NutritionGoal | null>(null)
+  const [notes,          setNotes]          = useState('')
+  const [notesSaved,     setNotesSaved]     = useState(false)
   const initialDate = searchParams.get('date') ?? getLocalToday()
   const [selectedDate, setSelectedDate] = useState(
     initialDate <= getLocalToday() ? initialDate : getLocalToday()
   )
-  const [friends, setFriends] = useState<FriendWithLog[]>([])
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [friends,  setFriends]  = useState<FriendWithLog[]>([])
+  const [loading,  setLoading]  = useState(true)
+  const [saving,   setSaving]   = useState(false)
   const [showPhotoUpload, setShowPhotoUpload] = useState(false)
 
   const isToday = selectedDate === getLocalToday()
 
-  // Live friend activity notifications
   useFriendNotifications(friends.map(f => f.profile))
 
-  // Fetch profile + log for selected date
   const fetchData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    // Profile
     const { data: profileData } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
       .single()
 
-    if (profileData) setProfile(profileData)
+    if (profileData) {
+      setProfile(profileData)
+      // Redirect to onboarding if not completed
+      if (!profileData.onboarding_completed) {
+        router.push('/onboarding')
+        return
+      }
+    }
 
-    // Daily log
-    const { data: logData } = await supabase
-      .from('daily_logs')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('log_date', selectedDate)
-      .maybeSingle()
+    const [
+      { data: logData },
+      { data: tasksData },
+      { data: nutritionData },
+    ] = await Promise.all([
+      supabase.from('daily_logs').select('*').eq('user_id', user.id).eq('log_date', selectedDate).maybeSingle(),
+      supabase.from('challenge_tasks').select('*').eq('user_id', user.id).order('sort_order'),
+      supabase.from('nutrition_goals').select('*').eq('user_id', user.id).maybeSingle(),
+    ])
 
     setLog(logData ?? {})
     setNotes(logData?.notes ?? '')
-  }, [supabase, selectedDate])
+    setTasks(tasksData ?? [])
+    setNutritionGoal(nutritionData ?? null)
+  }, [supabase, selectedDate, router])
 
-  // Fetch friends
   const fetchFriends = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
@@ -86,13 +98,9 @@ function DashboardContent() {
 
     if (!links?.length) return
 
-    const friendIds = links.map((l) => l.friend_user_id)
+    const friendIds = links.map(l => l.friend_user_id)
 
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('*')
-      .in('id', friendIds)
-
+    const { data: profiles } = await supabase.from('profiles').select('*').in('id', friendIds)
     if (!profiles?.length) return
 
     const today = getLocalToday()
@@ -102,31 +110,20 @@ function DashboardContent() {
       .in('user_id', friendIds)
       .eq('log_date', today)
 
-    const logMap = new Map((logs ?? []).map((l) => [l.user_id, l]))
+    const logMap = new Map((logs ?? []).map(l => [l.user_id, l]))
 
-    setFriends(
-      profiles.map((p) => ({
-        profile: p,
-        todayLog: logMap.get(p.id) ?? null,
-      }))
-    )
+    setFriends(profiles.map(p => ({ profile: p, todayLog: logMap.get(p.id) ?? null })))
   }, [supabase])
 
   useEffect(() => {
-    /* eslint-disable-next-line react-hooks/set-state-in-effect */
     setLoading(true)
     Promise.all([fetchData(), fetchFriends()]).finally(() => setLoading(false))
   }, [fetchData, fetchFriends])
 
-  async function ensureLog(userId: string): Promise<string | null> {
-    // Upsert a log row and return its id
-    const { data, error } = await supabase
+  async function ensureLog(userId: string): Promise<void> {
+    await supabase
       .from('daily_logs')
       .upsert({ user_id: userId, log_date: selectedDate }, { onConflict: 'user_id,log_date' })
-      .select('id')
-      .single()
-    if (error) return null
-    return data?.id ?? null
   }
 
   async function handleToggle(key: TaskKey) {
@@ -134,9 +131,7 @@ function DashboardContent() {
     if (!user) return
 
     const newVal = !(log?.[key] ?? false)
-
-    // Optimistic update
-    setLog((prev) => ({ ...prev, [key]: newVal }))
+    setLog(prev => ({ ...prev, [key]: newVal }))
     setSaving(true)
 
     try {
@@ -150,8 +145,27 @@ function DashboardContent() {
 
       if (error) throw error
     } catch {
-      // Revert
-      setLog((prev) => ({ ...prev, [key]: !newVal }))
+      setLog(prev => ({ ...prev, [key]: !newVal }))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleSaveDetail(fields: Partial<DailyLog>) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    setSaving(true)
+    try {
+      await ensureLog(user.id)
+      await supabase
+        .from('daily_logs')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .update(fields as any)
+        .eq('user_id', user.id)
+        .eq('log_date', selectedDate)
+
+      setLog(prev => ({ ...prev, ...fields }))
     } finally {
       setSaving(false)
     }
@@ -180,7 +194,7 @@ function DashboardContent() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    setLog((prev) => ({ ...prev, photo_url: url, progress_photo_done: true }))
+    setLog(prev => ({ ...prev, photo_url: url, progress_photo_done: true }))
     await ensureLog(user.id)
     await supabase
       .from('daily_logs')
@@ -191,9 +205,11 @@ function DashboardContent() {
     setShowPhotoUpload(false)
   }
 
-  const challengeInfo = getChallengeInfo(profile?.start_date ?? null)
-  const completedCount = countCompleted(log ?? {})
-  const isFutureDate = selectedDate > getLocalToday()
+  const challengeInfo    = getChallengeInfo(profile?.start_date ?? null)
+  const total            = totalEnabled(tasks)
+  const completedCount   = countCompleted(log ?? {}, tasks)
+  const microcopy        = getMicrocopy(completedCount, total)
+  const isFutureDate     = selectedDate > getLocalToday()
 
   if (loading) {
     return (
@@ -205,7 +221,6 @@ function DashboardContent() {
 
   return (
     <div className="min-h-dvh bg-background pb-24">
-      {/* ── Header ───────────────────────────────────────── */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border px-4 py-3">
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <span className="text-xs font-semibold text-primary tracking-widest uppercase">75 Hard</span>
@@ -220,10 +235,8 @@ function DashboardContent() {
 
       <div className="max-w-lg mx-auto px-4 py-6 space-y-8">
 
-        {/* ── Day status ─────────────────────────────────── */}
         <DayStatus info={challengeInfo} displayName={profile?.display_name} />
 
-        {/* ── No start date ──────────────────────────────── */}
         {challengeInfo.status === 'no_start_date' && (
           <Link
             href="/settings"
@@ -233,8 +246,8 @@ function DashboardContent() {
           </Link>
         )}
 
-        {/* ── Date navigator + progress ───────────────────── */}
-        <div className="space-y-4">
+        {/* Date navigator + progress */}
+        <div className="space-y-3">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSelectedDate(addDays(selectedDate, -1))}
@@ -261,21 +274,25 @@ function DashboardContent() {
             </button>
           </div>
 
-          <ProgressBar completed={completedCount} />
+          <ProgressBar completed={completedCount} total={total} />
+
+          <p className="text-xs text-muted text-center font-medium">{microcopy}</p>
         </div>
 
-        {/* ── Checklist ──────────────────────────────────── */}
+        {/* Checklist */}
         {isFutureDate ? (
           <p className="text-center text-muted text-sm py-8">Future day — check back then.</p>
         ) : (
           <div className="space-y-5">
             <DailyChecklist
+              key={selectedDate}
+              tasks={tasks}
               log={log ?? {}}
               onToggle={handleToggle}
-              onPhotoUploadClick={() => setShowPhotoUpload((v) => !v)}
+              onSaveDetail={handleSaveDetail}
+              onPhotoUploadClick={() => setShowPhotoUpload(v => !v)}
             />
 
-            {/* Photo upload */}
             {(showPhotoUpload || log?.photo_url) && profile && (
               <PhotoUpload
                 userId={profile.id}
@@ -285,11 +302,10 @@ function DashboardContent() {
               />
             )}
 
-            {/* Notes */}
             <div>
               <textarea
                 value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                onChange={e => setNotes(e.target.value)}
                 onBlur={handleSaveNotes}
                 placeholder="Notes for today…"
                 rows={3}
@@ -300,7 +316,35 @@ function DashboardContent() {
           </div>
         )}
 
-        {/* ── Accountability ─────────────────────────────── */}
+        {/* Nutrition goal card */}
+        {nutritionGoal && (
+          <Link href="/nutrition" className="block p-4 rounded-xl bg-surface border border-border hover:border-primary/40 transition-colors">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-semibold text-muted uppercase tracking-wider">Nutrition Goals</p>
+              <span className="text-xs text-primary">Edit →</span>
+            </div>
+            <div className="flex gap-4">
+              <div>
+                <p className="text-lg font-black text-foreground">{nutritionGoal.target_calories?.toLocaleString()}</p>
+                <p className="text-[10px] text-muted uppercase tracking-wide">Calories</p>
+              </div>
+              <div>
+                <p className="text-lg font-black text-foreground">{nutritionGoal.protein_g}g</p>
+                <p className="text-[10px] text-muted uppercase tracking-wide">Protein</p>
+              </div>
+              <div>
+                <p className="text-lg font-black text-foreground">{nutritionGoal.carbs_g}g</p>
+                <p className="text-[10px] text-muted uppercase tracking-wide">Carbs</p>
+              </div>
+              <div>
+                <p className="text-lg font-black text-foreground">{nutritionGoal.fat_g}g</p>
+                <p className="text-[10px] text-muted uppercase tracking-wide">Fat</p>
+              </div>
+            </div>
+          </Link>
+        )}
+
+        {/* Accountability partners */}
         {friends.length > 0 ? (
           <div>
             <div className="flex items-center justify-between mb-3">
