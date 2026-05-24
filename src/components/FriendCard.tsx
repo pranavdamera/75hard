@@ -25,38 +25,30 @@ export default function FriendCard({ friend, todayLog, compact = false }: Friend
 
   if (compact) {
     return (
-      <div className="flex items-center gap-3 p-3 rounded-xl bg-surface border border-border">
-        {/* Avatar */}
+      <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-surface border border-border">
         <div
-          className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-          style={{ background: 'rgba(249,115,22,0.15)', color: 'var(--primary)' }}
+          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+          style={{ background: 'rgba(249,115,22,0.12)', color: 'var(--primary)' }}
         >
           {(friend.display_name ?? friend.email)[0].toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold truncate">
+          <p className="text-sm font-medium truncate">
             {friend.display_name ?? friend.email.split('@')[0]}
           </p>
           <p className="text-xs text-muted">
-            {info.status === 'in_progress' ? `Day ${info.dayNumber}` : info.status === 'not_started' ? 'Not started' : 'Complete'}
+            {info.status === 'in_progress' ? `Day ${info.dayNumber}` : info.status === 'not_started' ? 'Not started' : 'Done'}
           </p>
         </div>
-        <div className="text-right shrink-0">
-          <p className={['text-sm font-bold', allDone ? 'text-success' : 'text-foreground'].join(' ')}>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={['text-sm font-semibold tabular-nums', allDone ? 'text-success' : 'text-foreground'].join(' ')}>
             {done}/8
-          </p>
-          <p className="text-[10px] text-muted">today</p>
+          </span>
+          <div
+            className="w-2 h-2 rounded-full"
+            style={{ background: allDone ? 'var(--success)' : hasStarted ? 'var(--warning)' : 'var(--border)' }}
+          />
         </div>
-        <div
-          className="w-2.5 h-2.5 rounded-full shrink-0"
-          style={{
-            background: allDone
-              ? 'var(--success)'
-              : hasStarted
-              ? 'var(--warning)'
-              : 'var(--border)',
-          }}
-        />
       </div>
     )
   }
