@@ -1,4 +1,4 @@
-import { getChallengeInfo } from '@/lib/utils'
+import { getChallengeInfo, countCompleted } from '@/lib/utils'
 import type { Profile, DailyLog } from '@/types/database'
 
 interface FriendCardProps {
@@ -7,20 +7,12 @@ interface FriendCardProps {
   compact?: boolean
 }
 
-const TASK_KEYS = [
-  'workout_1_done', 'workout_2_done', 'outdoor_workout_done',
-  'diet_done', 'water_done', 'reading_done', 'progress_photo_done', 'no_alcohol_cheat_done',
-] as const
-
-function countDone(log: Partial<DailyLog> | null): number {
-  if (!log) return 0
-  return TASK_KEYS.filter((k) => log[k] === true).length
-}
+const TOTAL = 7 // default task count for friend display (without loading their tasks)
 
 export default function FriendCard({ friend, todayLog, compact = false }: FriendCardProps) {
-  const info = getChallengeInfo(friend.start_date)
-  const done = countDone(todayLog)
-  const allDone = done === 8
+  const info    = getChallengeInfo(friend.start_date)
+  const done    = countCompleted(todayLog ?? {})
+  const allDone = done >= TOTAL
   const hasStarted = done > 0
 
   if (compact) {
@@ -42,7 +34,7 @@ export default function FriendCard({ friend, todayLog, compact = false }: Friend
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className={['text-sm font-semibold tabular-nums', allDone ? 'text-success' : 'text-foreground'].join(' ')}>
-            {done}/8
+            {done}/{TOTAL}
           </span>
           <div
             className="w-2 h-2 rounded-full"
@@ -55,7 +47,6 @@ export default function FriendCard({ friend, todayLog, compact = false }: Friend
 
   return (
     <div className="p-5 rounded-xl bg-surface border border-border space-y-4">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <div
           className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold shrink-0"
@@ -77,36 +68,29 @@ export default function FriendCard({ friend, todayLog, compact = false }: Friend
         )}
       </div>
 
-      {/* Today's progress */}
       <div>
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs text-muted uppercase tracking-wider font-semibold">Today</span>
           <span className={['text-sm font-bold', allDone ? 'text-success' : ''].join(' ')}>
-            {done}/8 {allDone && '🔥'}
+            {done}/{TOTAL} {allDone && '🔥'}
           </span>
         </div>
-        {/* Mini task dots */}
         <div className="flex gap-1.5 flex-wrap">
-          {TASK_KEYS.map((key) => (
+          {Array.from({ length: TOTAL }, (_, i) => (
             <div
-              key={key}
+              key={i}
               className="w-5 h-5 rounded-full"
-              style={{
-                background: todayLog?.[key]
-                  ? 'var(--success)'
-                  : 'var(--surface-3)',
-              }}
+              style={{ background: i < done ? 'var(--success)' : 'var(--surface-3)' }}
             />
           ))}
         </div>
       </div>
 
-      {/* Progress bar */}
       <div className="h-1.5 rounded-full bg-surface-3 overflow-hidden">
         <div
           className="h-full rounded-full transition-all"
           style={{
-            width: `${(done / 8) * 100}%`,
+            width: `${(done / TOTAL) * 100}%`,
             background: allDone ? 'var(--success)' : 'var(--primary)',
           }}
         />

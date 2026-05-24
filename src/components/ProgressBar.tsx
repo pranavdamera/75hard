@@ -3,9 +3,10 @@ interface ProgressBarProps {
   total?: number
 }
 
-export default function ProgressBar({ completed, total = 8 }: ProgressBarProps) {
-  const pct = Math.round((completed / total) * 100)
-  const allDone = completed === total
+export default function ProgressBar({ completed, total = 7 }: ProgressBarProps) {
+  const safeTotal = total > 0 ? total : 7
+  const pct       = Math.min(100, Math.round((completed / safeTotal) * 100))
+  const allDone   = completed >= safeTotal
 
   return (
     <div className="space-y-2">
@@ -13,13 +14,8 @@ export default function ProgressBar({ completed, total = 8 }: ProgressBarProps) 
         <span className="text-xs font-semibold text-muted uppercase tracking-wider">
           Daily Progress
         </span>
-        <span
-          className={[
-            'text-sm font-bold',
-            allDone ? 'text-success' : 'text-foreground',
-          ].join(' ')}
-        >
-          {completed}/{total}
+        <span className={['text-sm font-bold', allDone ? 'text-success' : 'text-foreground'].join(' ')}>
+          {completed}/{safeTotal}
           {allDone && ' 🔥'}
         </span>
       </div>
