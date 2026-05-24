@@ -162,7 +162,7 @@ export const TASK_LABELS: Record<TaskKey, { label: string; emoji: string; descri
   progress_photo_done: {
     label: 'Progress Photo',
     emoji: '📸',
-    description: 'Required every day',
+    description: 'Take a daily photo',
   },
   no_alcohol_cheat_done: {
     label: 'No Alcohol',

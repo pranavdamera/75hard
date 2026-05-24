@@ -89,7 +89,6 @@ export default function PhotoUpload({ userId, date, currentUrl, onUploaded }: Ph
         ref={inputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0]

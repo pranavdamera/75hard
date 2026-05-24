@@ -7,34 +7,26 @@ interface DailyChecklistProps {
   log: Partial<DailyLog>
   onToggle: (key: TaskKey) => void
   disabled?: boolean
-  isPhotoTask?: (key: TaskKey) => boolean
-  onPhotoTaskClick?: () => void
+  onPhotoUploadClick?: () => void
 }
 
 export default function DailyChecklist({
   log,
   onToggle,
   disabled,
-  isPhotoTask,
-  onPhotoTaskClick,
+  onPhotoUploadClick,
 }: DailyChecklistProps) {
   return (
     <div className="space-y-2.5">
       {TASK_KEYS.map((key) => {
         const done = log[key] === true
         const meta = TASK_LABELS[key]
-        const isPhoto = isPhotoTask?.(key) ?? false
+        const isPhoto = key === 'progress_photo_done'
 
         return (
           <button
             key={key}
-            onClick={() => {
-              if (isPhoto && !done && onPhotoTaskClick) {
-                onPhotoTaskClick()
-              } else {
-                onToggle(key)
-              }
-            }}
+            onClick={() => onToggle(key)}
             disabled={disabled}
             className={cn(
               'task-card w-full flex items-center gap-4 p-4 rounded-xl border text-left',
@@ -62,7 +54,18 @@ export default function DailyChecklist({
               >
                 {meta.label}
               </p>
-              <p className="text-xs text-muted mt-0.5 leading-snug">{meta.description}</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-xs text-muted leading-snug">{meta.description}</p>
+                {isPhoto && onPhotoUploadClick && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onPhotoUploadClick() }}
+                    className="text-[10px] text-primary hover:underline shrink-0"
+                  >
+                    upload
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Checkbox */}
