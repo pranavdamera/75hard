@@ -57,10 +57,10 @@ export default function Nav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-surface"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/60 bg-surface/95 backdrop-blur-md"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <div className="flex items-center justify-around max-w-lg mx-auto">
+      <div className="flex items-stretch justify-around max-w-lg mx-auto">
         {NAV_ITEMS.map(({ href, label, icon }) => {
           const active = pathname.startsWith(href)
           return (
@@ -68,12 +68,27 @@ export default function Nav() {
               key={href}
               href={href}
               className={[
-                'flex flex-col items-center gap-0.5 py-2.5 px-2 flex-1 transition-colors',
+                'relative flex flex-col items-center gap-0.5 pt-3 pb-2.5 px-1 flex-1 transition-colors duration-200',
                 active ? 'text-primary' : 'text-muted hover:text-foreground',
               ].join(' ')}
             >
+              {/* Active indicator */}
+              <div
+                className="absolute top-0 left-1/2 -translate-x-1/2 rounded-full transition-all duration-300"
+                style={{
+                  width:      active ? '28px' : '0px',
+                  height:     '2px',
+                  background: active ? 'var(--primary)' : 'transparent',
+                  boxShadow:  active ? '0 0 8px rgba(249,115,22,0.7)' : 'none',
+                }}
+              />
               {icon(active)}
-              <span className="text-[9px] font-semibold tracking-wide uppercase">{label}</span>
+              <span className={[
+                'text-[9px] font-bold tracking-wide uppercase transition-colors duration-200',
+                active ? 'text-primary' : 'text-muted/70',
+              ].join(' ')}>
+                {label}
+              </span>
             </Link>
           )
         })}
