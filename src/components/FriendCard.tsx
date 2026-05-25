@@ -1,13 +1,15 @@
-import { getChallengeInfo, countCompleted } from '@/lib/utils'
-import type { Profile, DailyLog } from '@/types/database'
+import Link from 'next/link'
+import { getChallengeInfo, countCompleted, getFriendStatusPill } from '@/lib/utils'
+import type { Profile, DailyLog, ChallengeTask } from '@/types/database'
 
 interface FriendCardProps {
   friend: Profile
   todayLog: Partial<DailyLog> | null
+  tasks?: ChallengeTask[]
   compact?: boolean
 }
 
-const TOTAL = 7
+const DEFAULT_TOTAL = 7
 
 function Avatar({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' }) {
   const letter = name[0].toUpperCase()
@@ -26,17 +28,22 @@ function Avatar({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' }) {
   )
 }
 
-export default function FriendCard({ friend, todayLog, compact = false }: FriendCardProps) {
-  const info       = getChallengeInfo(friend.start_date)
-  const done       = countCompleted(todayLog ?? {})
-  const allDone    = done >= TOTAL
-  const hasStarted = done > 0
-  const pct        = Math.min(100, Math.round((done / TOTAL) * 100))
+export default function FriendCard({ friend, todayLog, tasks, compact = false }: FriendCardProps) {
+  const info        = getChallengeInfo(friend.start_date)
+  const total       = tasks ? tasks.filter(t => t.enabled).length || DEFAULT_TOTAL : DEFAULT_TOTAL
+  const done        = countCompleted(todayLog ?? {})
+  const allDone     = done >= total
+  const hasStarted  = done > 0
+  const pct         = Math.min(100, Math.round((done / total) * 100))
   const displayName = friend.display_name ?? friend.email.split('@')[0]
+  const pill        = getFriendStatusPill(done, total)
 
   if (compact) {
     return (
-      <div className="flex items-center gap-3 px-3.5 py-3 rounded-xl bg-surface border border-border/60 hover:border-border transition-colors">
+      <Link
+        href={`/friends/${friend.id}`}
+        className="flex items-center gap-3 px-3.5 py-3 rounded-xl bg-surface border border-border/60 hover:border-primary/30 transition-colors"
+      >
         <Avatar name={displayName} size="sm" />
 
         <div className="flex-1 min-w-0">
@@ -63,7 +70,7 @@ export default function FriendCard({ friend, todayLog, compact = false }: Friend
             'text-sm font-bold tabular-nums',
             allDone ? 'text-success' : hasStarted ? 'text-foreground' : 'text-muted',
           ].join(' ')}>
-            {done}/{TOTAL}
+            {done}/{total}
           </span>
           <div
             className="w-2 h-2 rounded-full transition-colors duration-300"
@@ -77,12 +84,15 @@ export default function FriendCard({ friend, todayLog, compact = false }: Friend
             }}
           />
         </div>
-      </div>
+      </Link>
     )
   }
 
   return (
-    <div className="p-4 rounded-xl bg-surface border border-border/60 space-y-4">
+    <Link
+      href={`/friends/${friend.id}`}
+      className="block p-4 rounded-xl bg-surface border border-border/60 hover:border-primary/30 transition-all duration-200 space-y-4"
+    >
       {/* Header */}
       <div className="flex items-center gap-3">
         <Avatar name={displayName} />
@@ -90,12 +100,17 @@ export default function FriendCard({ friend, todayLog, compact = false }: Friend
           <p className="font-bold truncate">{displayName}</p>
           <p className="text-xs text-muted truncate">{friend.email}</p>
         </div>
-        {info.status === 'in_progress' && (
-          <div className="text-right shrink-0 bg-primary/10 px-3 py-1.5 rounded-xl border border-primary/20">
-            <p className="text-[10px] text-muted uppercase tracking-wider font-semibold">Day</p>
-            <p className="text-2xl font-black text-primary leading-none">{info.dayNumber}</p>
-          </div>
-        )}
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          {info.status === 'in_progress' && (
+            <div className="bg-primary/10 px-3 py-1.5 rounded-xl border border-primary/20 text-center">
+              <p className="text-[10px] text-muted uppercase tracking-wider font-semibold">Day</p>
+              <p className="text-2xl font-black text-primary leading-none">{info.dayNumber}</p>
+            </div>
+          )}
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${pill.classes}`}>
+            {pill.label}
+          </span>
+        </div>
       </div>
 
       {/* Today's progress */}
@@ -103,13 +118,12 @@ export default function FriendCard({ friend, todayLog, compact = false }: Friend
         <div className="flex items-center justify-between mb-2">
           <span className="text-[10px] text-muted uppercase tracking-widest font-semibold">Today</span>
           <span className={['text-sm font-bold tabular-nums', allDone ? 'text-success' : ''].join(' ')}>
-            {done}/{TOTAL} {allDone && '🔥'}
+            {done}/{total} {allDone && '🔥'}
           </span>
         </div>
 
-        {/* Task dots */}
         <div className="flex gap-1.5">
-          {Array.from({ length: TOTAL }, (_, i) => (
+          {Array.from({ length: total }, (_, i) => (
             <div
               key={i}
               className="flex-1 h-1.5 rounded-full transition-all duration-300"
@@ -125,6 +139,8 @@ export default function FriendCard({ friend, todayLog, compact = false }: Friend
           ))}
         </div>
       </div>
-    </div>
+
+      <p className="text-[11px] text-primary/60 font-semibold text-right">View profile →</p>
+    </Link>
   )
 }

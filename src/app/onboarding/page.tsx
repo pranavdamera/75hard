@@ -82,6 +82,7 @@ export default function OnboardingPage() {
   // When challenge style changes to strict, re-enable all tasks
   useEffect(() => {
     if (challengeStyle === 'strict') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEnabledKeys(new Set(ALL_CHALLENGE_TASK_KEYS))
     }
   }, [challengeStyle])
