@@ -18,6 +18,10 @@ export interface Database {
           current_weight_lbs: number | null
           goal_weight_lbs: number | null
           activity_level: string | null
+          friends_can_view_photos: boolean
+          friends_can_view_workout_notes: boolean
+          friends_can_view_meals: boolean
+          protein_preference: string
           created_at: string
           updated_at: string
         }
@@ -35,6 +39,10 @@ export interface Database {
           current_weight_lbs?: number | null
           goal_weight_lbs?: number | null
           activity_level?: string | null
+          friends_can_view_photos?: boolean
+          friends_can_view_workout_notes?: boolean
+          friends_can_view_meals?: boolean
+          protein_preference?: string
         }
         Update: {
           display_name?: string | null
@@ -48,6 +56,10 @@ export interface Database {
           current_weight_lbs?: number | null
           goal_weight_lbs?: number | null
           activity_level?: string | null
+          friends_can_view_photos?: boolean
+          friends_can_view_workout_notes?: boolean
+          friends_can_view_meals?: boolean
+          protein_preference?: string
           updated_at?: string
         }
         Relationships: []
@@ -143,6 +155,7 @@ export interface Database {
           enabled: boolean
           sort_order: number
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string

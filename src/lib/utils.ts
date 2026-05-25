@@ -115,9 +115,24 @@ export function computeStreak(
 export function getMicrocopy(completed: number, total: number): string {
   if (total === 0) return 'Set up your tasks in settings.'
   if (completed === 0) return 'Start the day strong.'
-  if (completed === total) return 'Day locked in.'
-  if (completed / total >= 0.5) return 'Momentum building.'
-  return `${total - completed} left.`
+  if (completed >= total) return 'Day complete. Locked in.'
+  if (completed / total >= 0.5) return 'Almost locked in.'
+  return 'Stack the small wins.'
+}
+
+export interface FriendStatusPill {
+  label: string
+  classes: string
+}
+
+export function getFriendStatusPill(done: number, total: number): FriendStatusPill {
+  if (total > 0 && done >= total) {
+    return { label: 'Locked In', classes: 'text-success bg-success/10 border border-success/25' }
+  }
+  if (done > 0) {
+    return { label: 'In Progress', classes: 'text-primary bg-primary/10 border border-primary/20' }
+  }
+  return { label: 'Needs Push', classes: 'text-muted bg-surface-3 border border-border' }
 }
 
 // ── Nutrition calculations (Mifflin-St Jeor) ─────────────────
